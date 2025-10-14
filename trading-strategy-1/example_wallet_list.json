@@ -1,0 +1,14 @@
+[
+  {
+    "address": "BnL5k1CbJZf1pjdfqFmNbgmFbufWBHGneE3RSn6ZHCcx",
+    "type": "whale",
+    "label": "wallet1",
+    "chain": "solana"
+  },
+  {
+    "address": "EGJnqcxVbhJFJ6Xnchtaw8jmPSvoLXfN2gWsY9Etz5SZ",
+    "type": "exchange",
+    "label": "exchange1",
+    "chain": "solana"
+  }
+]

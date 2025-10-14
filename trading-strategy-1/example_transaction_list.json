@@ -1,0 +1,42 @@
+[
+  {
+    "timestamp": "2025-10-12T15:42:00Z",
+    "tx_signature": "signature1",
+    "from_address": "wallet1",
+    "to_address": "wallet2",
+    "from_type": "whale",
+    "to_type": "exchange",
+    "token": "SOL",
+    "amount": 1200.5
+  },
+  {
+    "timestamp": "2025-11-12T15:42:00Z",
+    "tx_signature": "signature2",
+    "from_address": "wallet1",
+    "to_address": "wallet4",
+    "from_type": "whale",
+    "to_type": "exchange",
+    "token": "SOL",
+    "amount": 650.5
+  },
+  {
+    "timestamp": "2025-10-12T11:13:00Z",
+    "tx_signature": "signature3",
+    "from_address": "wallet2",
+    "to_address": "wallet1",
+    "from_type": "exchange",
+    "to_type": "whale",
+    "token": "SOL",
+    "amount": 112.0
+  },
+  {
+    "timestamp": "2025-11-12T19:49:10Z",
+    "tx_signature": "signature4",
+    "from_address": "wallet4",
+    "to_address": "wallet1",
+    "from_type": "exchange",
+    "to_type": "whale",
+    "token": "SOL",
+    "amount": 300.0
+  }
+]
