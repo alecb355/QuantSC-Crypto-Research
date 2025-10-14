@@ -1,1 +1,1 @@
-We are testing if transactions between "whale" wallets and exchange wallets are an indicator for coin price movement
+QuantSC Fall 2025 Crypto Team
