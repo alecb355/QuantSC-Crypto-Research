@@ -1,0 +1,12 @@
+{
+  "ETH": {
+    "correlation": 0.86,
+    "lag_with_highest_corr": 1,
+    "granger_p_value": 0.03
+  },
+  "SOL": {
+    "correlation": 0.75,
+    "lag_with_highest_corr": 2,
+    "granger_p_value": 0.12
+  }
+}

@@ -1,0 +1,1 @@
+We are testing if we can make a strategy based on lead-lag relationships where BTC is the leader and alt coins lag behind
