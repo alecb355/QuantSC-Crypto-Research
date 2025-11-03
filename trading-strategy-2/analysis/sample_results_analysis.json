@@ -1,0 +1,18 @@
+{
+  "ETH": {
+    "correlation": 0.2086,
+    "lag_with_highest_corr": 0,
+    "cross_corr_at_best_lag": 0.2086,
+    "second_best_lag": -7,
+    "cross_corr_at_second_best_lag": -0.1015,
+    "granger_p_value": 0.0001
+  },
+  "SOL": {
+    "correlation": 0.2366,
+    "lag_with_highest_corr": 0,
+    "cross_corr_at_best_lag": 0.2366,
+    "second_best_lag": -31,
+    "cross_corr_at_second_best_lag": 0.1375,
+    "granger_p_value": 0.0144
+  }
+}
