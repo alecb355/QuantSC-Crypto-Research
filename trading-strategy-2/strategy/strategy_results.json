@@ -1,14 +1,16 @@
 {
   "ETH": {
     "lag_used": 1,
-    "total_return": 0.0502,
-    "sharpe": 1.53,
-    "max_drawdown": 0.0201
+    "best_threshold": 0.0,
+    "total_return": 0.565,
+    "sharpe": 21.97,
+    "max_drawdown": 0.1552
   },
   "SOL": {
     "lag_used": 2,
-    "total_return": 0.0542,
-    "sharpe": 1.65,
-    "max_drawdown": 0.0094
+    "best_threshold": 0.0,
+    "total_return": 0.5887,
+    "sharpe": 23.07,
+    "max_drawdown": 0.2138
   }
 }
