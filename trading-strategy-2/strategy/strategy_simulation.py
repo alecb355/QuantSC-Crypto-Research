@@ -9,7 +9,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve()
 ROOT = HERE.parents[1]
 DATA = ROOT / "data"
-OUT_DIR = ROOT / "strategy"
+OUT_DIR = ROOT / "strategy" / "plots"
 OUT_DIR.mkdir(exist_ok=True)
 
 BTC_PATH = DATA / "example_btc.csv"
@@ -28,7 +28,10 @@ def load_price_series(path, label):
     return df
 
 def compute_log_returns(df, col):
-    df[f"{col}_ret"] = np.log(df[col]).diff()
+    # df[f"{col}_ret"] = np.log(df[col]).diff()
+
+    # df[f"{col}_ret"] = df[col]
+    df[f"{col}_ret"] = df[col].pct_change()
     return df.dropna().reset_index(drop=True)
 
 def align_and_returns(btc_df, coin_df, coin_label):
@@ -69,11 +72,13 @@ def simulate_strategy(df, coin_label, lag=1, buy_thresh=0.0, sell_thresh=0.0, ma
     df = df.iloc[1:].copy()
     df["position"] = positions
     df["strategy_ret"] = strategy_rets
-    df["cumret"] = np.exp(np.cumsum(df["strategy_ret"])) - 1
+
+    # df["cumret"] = np.exp(np.cumsum(df["strategy_ret"])) - 1
+    df["cumret"] = (1 + df["strategy_ret"]).cumprod() - 1
 
     total_return = df["cumret"].iloc[-1]
     sharpe = (
-        np.mean(df["strategy_ret"]) / np.std(df["strategy_ret"]) * np.sqrt(252*24*60)
+        np.mean(df["strategy_ret"]) / np.std(df["strategy_ret"]) * np.sqrt(365*24*60)
         if np.std(df["strategy_ret"]) > 0 else 0
     )
     cummax = np.maximum.accumulate(df["cumret"])
