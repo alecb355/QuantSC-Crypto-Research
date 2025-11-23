@@ -3,24 +3,33 @@ import json
 import numpy as np
 import pandas as pd
 from pathlib import Path
+from statsmodels.tsa.stattools import grangercausalitytests
 
 HERE = Path(__file__).resolve()
-ROOT = HERE.parents[1]        # .../trading-strategy-1
+ROOT = HERE.parents[1]       
 DATA = ROOT / "data"
-
-# Optional: Granger causality (skip gracefully if statsmodels isn't installed)
-try:
-    from statsmodels.tsa.stattools import grangercausalitytests
-    HAS_STATSMODELS = True
-except Exception:
-    HAS_STATSMODELS = False
 
 # ---------- config ----------
 # Path to BTC file and any number of altcoin files:
-BTC_PATH   = DATA / "example_btc.csv"
-COIN_FILES = [DATA / "example_eth.csv", DATA / "example_sol.csv"]
+# BTC_PATH   = DATA / "example_btc.csv"
+# COIN_FILES = [DATA / "example_eth.csv", DATA / "example_sol.csv"]
+# MAX_LAG = 60     # minutes (lags) to search for cross-corr and Granger
+# OUT_PATH = ROOT / "analysis" / "sample_results_analysis.json"
+
+# ---------- config ----------
+DATA_1M = DATA / "data_1m" 
+
+# Find all CSV files in the data_1m folder
+ALL_FILES = list(DATA_1M.glob("*.csv"))
+
+# We must explicitly separate BTCUSD.csv (our benchmark) from the altcoins
+BTC_FILENAME = "BTCUSD.csv"
+BTC_PATH = DATA_1M / BTC_FILENAME
+COIN_FILES = [p for p in ALL_FILES if p.name != BTC_FILENAME] 
+
 MAX_LAG = 60     # minutes (lags) to search for cross-corr and Granger
-OUT_PATH = ROOT / "analysis" / "sample_results_analysis.json"
+# Changing the output name to reflect running on all tokens
+OUT_PATH = ROOT / "analysis" / "all_22_tokens_results.json" 
 # ----------------------------
 
 def load_close_series(path, label):
@@ -89,8 +98,6 @@ def best_cross_corr(coin_ret, btc_ret, max_lag=10):
 
 def granger_pvalue(coin_ret, btc_ret, maxlag=10):
     """Min F-test p-value for H0: BTC does NOT Granger-cause coin."""
-    if not HAS_STATSMODELS:
-        return None
     data = pd.concat([coin_ret, btc_ret], axis=1)
     data.columns = ["coin_ret", "btc_ret"]
     try:
@@ -124,7 +131,7 @@ def analyze_coin(btc_df, coin_df, coin_label, max_lag=10):
 btc_df = load_close_series(BTC_PATH, "BTC")
 results = {}
 for path in COIN_FILES:
-    label = os.path.splitext(os.path.basename(path))[0].split("_")[-1]  # e.g., "eth" from "example_eth.csv"
+    label = os.path.splitext(os.path.basename(path))[0].split("_")[-1]  
     coin_df = load_close_series(path, label.upper())
     res = analyze_coin(btc_df, coin_df, label.upper(), max_lag=MAX_LAG)
     results.update(res)

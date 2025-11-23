@@ -1,0 +1,170 @@
+{
+  "XRPUSD": {
+    "correlation": 0.0769,
+    "lag_with_highest_corr": 0,
+    "cross_corr_at_best_lag": 0.0769,
+    "second_best_lag": -1,
+    "cross_corr_at_second_best_lag": 0.0456,
+    "granger_p_value": 0.0
+  },
+  "DOGEUSD": {
+    "correlation": 0.8127,
+    "lag_with_highest_corr": 0,
+    "cross_corr_at_best_lag": 0.8127,
+    "second_best_lag": 58,
+    "cross_corr_at_second_best_lag": 0.01,
+    "granger_p_value": 0.0
+  },
+  "SUIUSD": {
+    "correlation": 0.0545,
+    "lag_with_highest_corr": 0,
+    "cross_corr_at_best_lag": 0.0545,
+    "second_best_lag": -1,
+    "cross_corr_at_second_best_lag": 0.03,
+    "granger_p_value": 0.0
+  },
+  "WLFIUSDT": {
+    "correlation": 0.0301,
+    "lag_with_highest_corr": 0,
+    "cross_corr_at_best_lag": 0.0301,
+    "second_best_lag": 2,
+    "cross_corr_at_second_best_lag": 0.0269,
+    "granger_p_value": 0.0
+  },
+  "BCHUSD": {
+    "correlation": 0.0054,
+    "lag_with_highest_corr": -35,
+    "cross_corr_at_best_lag": 0.0095,
+    "second_best_lag": -57,
+    "cross_corr_at_second_best_lag": 0.009,
+    "granger_p_value": 0.0004
+  },
+  "ETHUSD": {
+    "correlation": 0.5494,
+    "lag_with_highest_corr": 0,
+    "cross_corr_at_best_lag": 0.5494,
+    "second_best_lag": -50,
+    "cross_corr_at_second_best_lag": 0.1144,
+    "granger_p_value": 0.0
+  },
+  "ICPUSD": {
+    "correlation": 0.0033,
+    "lag_with_highest_corr": -8,
+    "cross_corr_at_best_lag": -0.0135,
+    "second_best_lag": -22,
+    "cross_corr_at_second_best_lag": -0.0126,
+    "granger_p_value": 0.0
+  },
+  "HBARUSD": {
+    "correlation": 0.0068,
+    "lag_with_highest_corr": -11,
+    "cross_corr_at_best_lag": 0.7764,
+    "second_best_lag": 46,
+    "cross_corr_at_second_best_lag": 0.0094,
+    "granger_p_value": 0.0
+  },
+  "LTCUSD": {
+    "correlation": 0.0298,
+    "lag_with_highest_corr": 0,
+    "cross_corr_at_best_lag": 0.0298,
+    "second_best_lag": -1,
+    "cross_corr_at_second_best_lag": 0.0257,
+    "granger_p_value": 0.0
+  },
+  "SOLUSD": {
+    "correlation": 0.8539,
+    "lag_with_highest_corr": 0,
+    "cross_corr_at_best_lag": 0.8539,
+    "second_best_lag": -2,
+    "cross_corr_at_second_best_lag": 0.2119,
+    "granger_p_value": 0.0
+  },
+  "ZECUSDT": {
+    "correlation": 0.0062,
+    "lag_with_highest_corr": 0,
+    "cross_corr_at_best_lag": 0.0062,
+    "second_best_lag": 6,
+    "cross_corr_at_second_best_lag": 0.005,
+    "granger_p_value": 0.0057
+  },
+  "NEARUSD": {
+    "correlation": 0.0246,
+    "lag_with_highest_corr": 0,
+    "cross_corr_at_best_lag": 0.0246,
+    "second_best_lag": -1,
+    "cross_corr_at_second_best_lag": 0.0152,
+    "granger_p_value": 0.0
+  },
+  "XLMUSD": {
+    "correlation": 0.0045,
+    "lag_with_highest_corr": -16,
+    "cross_corr_at_best_lag": 0.5039,
+    "second_best_lag": -42,
+    "cross_corr_at_second_best_lag": -0.1201,
+    "granger_p_value": 0.0021
+  },
+  "LINKUSD": {
+    "correlation": 0.0405,
+    "lag_with_highest_corr": 0,
+    "cross_corr_at_best_lag": 0.0405,
+    "second_best_lag": -1,
+    "cross_corr_at_second_best_lag": 0.0223,
+    "granger_p_value": 0.0
+  },
+  "BNBUSD": {
+    "correlation": 0.8049,
+    "lag_with_highest_corr": 0,
+    "cross_corr_at_best_lag": 0.8049,
+    "second_best_lag": 58,
+    "cross_corr_at_second_best_lag": 0.0102,
+    "granger_p_value": 0.0
+  },
+  "HYPEUSD": {
+    "correlation": 0.0292,
+    "lag_with_highest_corr": 0,
+    "cross_corr_at_best_lag": 0.0292,
+    "second_best_lag": -1,
+    "cross_corr_at_second_best_lag": 0.0175,
+    "granger_p_value": 0.0
+  },
+  "SHIBUSD": {
+    "correlation": 0.0101,
+    "lag_with_highest_corr": -13,
+    "cross_corr_at_best_lag": 0.6061,
+    "second_best_lag": 0,
+    "cross_corr_at_second_best_lag": 0.0101,
+    "granger_p_value": 0.0
+  },
+  "DOTUSD": {
+    "correlation": 0.0095,
+    "lag_with_highest_corr": -2,
+    "cross_corr_at_best_lag": 0.0115,
+    "second_best_lag": -9,
+    "cross_corr_at_second_best_lag": 0.0096,
+    "granger_p_value": 0.0
+  },
+  "UNIUSD": {
+    "correlation": 0.0354,
+    "lag_with_highest_corr": 0,
+    "cross_corr_at_best_lag": 0.0354,
+    "second_best_lag": -8,
+    "cross_corr_at_second_best_lag": 0.0212,
+    "granger_p_value": 0.0
+  },
+  "ADAUSD": {
+    "correlation": 0.6878,
+    "lag_with_highest_corr": 0,
+    "cross_corr_at_best_lag": 0.6878,
+    "second_best_lag": 58,
+    "cross_corr_at_second_best_lag": 0.0121,
+    "granger_p_value": 0.0
+  },
+  "AVAXUSD": {
+    "correlation": 0.03,
+    "lag_with_highest_corr": 0,
+    "cross_corr_at_best_lag": 0.03,
+    "second_best_lag": -1,
+    "cross_corr_at_second_best_lag": 0.0192,
+    "granger_p_value": 0.0
+  }
+}
