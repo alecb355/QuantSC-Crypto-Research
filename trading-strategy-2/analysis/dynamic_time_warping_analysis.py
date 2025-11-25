@@ -101,6 +101,14 @@ def dtw_distance_and_lag(a, b):
     lag = float(np.mean([j - i for (i, j) in path])) if path else 0.0
     return float(D[n, m]), lag
 
+def pick_train_cutoff(overlap_index: pd.DatetimeIndex, train_end: str | None, train_ratio: float) -> pd.Timestamp:
+    if train_end:
+        ts = pd.Timestamp(train_end)
+        cut = ts if ts.tzinfo is not None else ts.tz_localize("UTC")
+        return cut
+    n = len(overlap_index)
+    j = max(1, int(n * train_ratio))
+    return overlap_index[min(j, n-1)]
 
 # -------------------------
 # Main scan
@@ -113,6 +121,13 @@ def main():
     ap.add_argument("--out",      default=str(DEFAULT_OUT), help="output CSV")
     ap.add_argument("--lead_sigma", type=float, default=1.0,
                     help="z-threshold for simple lead-lag momentum hint")
+    ap.add_argument("--train-end", type=str, default=None,
+                    help="ISO8601 cutoff in UTC for training (e.g., 2025-10-15T00:00:00Z). "
+                         "DTW is computed only up to this time.")
+    ap.add_argument("--train-ratio", type=float, default=0.7,
+                    help="If --train-end is not given, use the first train_ratio of overlapping bars as train.")
+    ap.add_argument("--k-out", default="analysis/dtw_train_lags.csv",
+                    help="Where to save the per-symbol k (lag_bars_abs) estimated on the train window.")
     args = ap.parse_args()
 
     # find files
@@ -144,15 +159,28 @@ def main():
         if len(joined) < args.lookback + 10:
             print(f"[skip] {sym}: not enough overlapping bars ({len(joined)})")
             continue
-        window = joined.tail(args.lookback)
-        a = window["btc"].to_numpy(dtype=float).ravel()
-        b = window["x"].to_numpy(dtype=float).ravel()
 
+        # ----- TRAIN/TEST SPLIT -----
+        # choose train cutoff (explicit --train-end or by ratio)
+        cutoff = pick_train_cutoff(joined.index, args.train_end, args.train_ratio)
 
-        dist, lag = dtw_distance_and_lag(a, b)   # lag>0 ⇒ BTC leads sym
-        # simple lead-lag hint: if BTC up over |lag| bars by > lead_sigma, follower might follow
+        # TRAIN window: only data <= cutoff, last lookback bars
+        joined_train = joined.loc[:cutoff]
+        if len(joined_train) < args.lookback:
+            print(f"[skip] {sym}: not enough TRAIN bars before cutoff ({len(joined_train)})")
+            continue
+        window_train = joined_train.tail(args.lookback)
+        a = window_train["btc"].values
+        b = window_train["x"].values
+
+        dist, lag = dtw_distance_and_lag(a, b)   # lag>0 ⇒ BTC leads sym (on TRAIN only)
         k = int(max(1, round(abs(lag))))
-        r_btc_k = window["btc"].tail(k).to_numpy(dtype=float).ravel()
+
+        # TEST window is everything after cutoff (we don’t use it here, just record sizes)
+        joined_test = joined.loc[cutoff:]
+        test_len = int(len(joined_test))
+        # simple lead-lag hint: if BTC up over |lag| bars by > lead_sigma, follower might follow
+        r_btc_k = window_train["btc"].tail(k).to_numpy(dtype=float).ravel()
         z_btc_k = (r_btc_k.sum() - r_btc_k.mean()*k) / (r_btc_k.std()*math.sqrt(k) + 1e-12)
 
         if lag > 0 and z_btc_k > args.lead_sigma:
@@ -167,12 +195,18 @@ def main():
             "dtw_distance": dist,
             "effective_lag_btc_leads": lag,
             "lag_bars_abs": k,
-            "btc_kbar_zmove": float(z_btc_k),
-            "leadlag_hint": hint,
-            "overlap_bars": int(len(window))
+            "train_end": cutoff.isoformat(),
+            "train_size": int(len(joined_train)),
+            "test_size": test_len,
+            "overlap_bars": int(len(joined))
         })
 
     out = pd.DataFrame(results).sort_values(["dtw_distance","symbol"])
+    # Also save compact per-symbol K table for downstream execution
+    ktab = out[["symbol", "lag_bars_abs", "train_end"]].rename(columns={"lag_bars_abs":"k"})
+    os.makedirs(os.path.dirname(args.k_out), exist_ok=True)
+    ktab.to_csv(args.k_out, index=False)
+    print(f"Saved k table: {args.k_out}")
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     out.to_csv(args.out, index=False)
     print(f"\nSaved: {args.out}")
