@@ -7,7 +7,7 @@ The workflow:
 1. Align all celeb coins to a common launch time (`T0`) and normalize their price paths.
 2. Optionally compare each coin to a TRUMP template using correlation + DTW.
 3. Run a **grid search** to find good parameters for a “buy the first dip after a moon” strategy.
-4. Run a full backtest of the First-Dip strategy using the best parameters.
+4. Run a full backtest of the First-Dip strategy using the best parameters and report sharpe ratio.
 
 ---
 

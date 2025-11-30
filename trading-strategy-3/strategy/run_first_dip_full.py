@@ -254,6 +254,32 @@ def pick_best_params(df_grid: pd.DataFrame, min_trades: int = 2):
     best = filt.iloc[0]
     return best
 
+def compute_sharpe_from_results(results_path: Path) -> float:
+    """
+    Compute per-trade Sharpe ratio from first_dip_results.csv.
+
+    Uses only rows where trade_taken == True.
+    Sharpe = mean(ret) / std(ret) (un-annualized, per trade).
+    Returns NaN if fewer than 2 trades.
+    """
+    if not results_path.exists():
+        raise FileNotFoundError(f"Results file not found at {results_path}")
+
+    df = pd.read_csv(results_path)
+    if "trade_taken" not in df.columns or "ret" not in df.columns:
+        raise ValueError("first_dip_results.csv must have 'trade_taken' and 'ret' columns.")
+
+    rets = df.loc[df["trade_taken"] == True, "ret"].astype(float)
+    if len(rets) < 2:
+        return float("nan")
+
+    ret_mean = rets.mean()
+    ret_std = rets.std(ddof=1)
+    if ret_std == 0:
+        return float("nan")
+
+    sharpe = ret_mean / ret_std
+    return float(sharpe)
 
 # -----------------------------
 # 4. Main
@@ -301,6 +327,10 @@ def main():
     df_final.to_csv(out_path, index=False)
     print(f"\nSaved per-coin first-dip results to {out_path}\n")
     print(df_final)
+
+    # 5) Compute Sharpe ratio
+    sharpe = compute_sharpe_from_results(out_path)
+    print(f"\nFinal Sharpe ratio: {sharpe:.2f}")
 
 
 if __name__ == "__main__":
