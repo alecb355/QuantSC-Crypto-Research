@@ -6,10 +6,10 @@ import argparse
 import os
 
 # ---- project-relative paths (portable) ----
-STRATEGY_DIR = Path(__file__).resolve().parent                # .../strategy
-PROJECT_DIR  = STRATEGY_DIR.parent                            # .../trading-strategy-2
-DATA_DIR     = PROJECT_DIR / "data" / "data_1m"               # CSVs live here
-ANALYSIS_DIR = PROJECT_DIR / "analysis"                       # DTW output lives here
+STRATEGY_DIR = Path(__file__).resolve().parent
+PROJECT_DIR  = STRATEGY_DIR.parent
+DATA_DIR     = PROJECT_DIR / "data" / "data_1m"
+ANALYSIS_DIR = PROJECT_DIR / "analysis"
 DEFAULT_REF  = "BTCUSD.csv"
 
 # default rolling window lengths (in 1-minute bars)
@@ -40,28 +40,18 @@ def backtest_leadlag_spread(
     coin_file, ref_file, k, z_entry, z_follow, z_close, fee_bps,
     test_start=None, test_end=None, z_lookback=Z_LOOKBACK, beta_lookback=BETA_LOOKBACK
 ):
-    ref = load_close(DATA_DIR / ref_file)
-    coi = load_close(DATA_DIR / coin_file)
-
-    # --- apply TEST window first ---
-    if test_start is not None and not pd.isna(test_start):
-        ref = ref.loc[test_start:]
-        coi = coi.loc[test_start:]
-    if test_end is not None and not pd.isna(test_end):
-        ref = ref.loc[:test_end]
-        coi = coi.loc[:test_end]
-
-    # re-align after slicing
-    idx = ref.index.intersection(coi.index)
-    ref, coi = ref.loc[idx], coi.loc[idx]
-
-    # basic safety: need enough bars after the split
-    if len(ref) < k + 100 or len(coi) < k + 100:
-        raise ValueError("Not enough TEST data after split for this k.")
-
-    # --- now do the rest ---
-    r_btc  = np.log(ref).diff().fillna(0.0)
-    r_coin = np.log(coi).diff().fillna(0.0)
+    # Load ALL data first to calculate rolling windows properly
+    ref_full = load_close(DATA_DIR / ref_file)
+    coi_full = load_close(DATA_DIR / coin_file)
+    
+    # Align on full dataset
+    idx_full = ref_full.index.intersection(coi_full.index)
+    ref_full = ref_full.loc[idx_full]
+    coi_full = coi_full.loc[idx_full]
+    
+    # Calculate returns and rolling stats on FULL data
+    r_btc  = np.log(ref_full).diff().fillna(0.0)
+    r_coin = np.log(coi_full).diff().fillna(0.0)
 
     Rb = r_btc.rolling(k).sum()
     Ri = r_coin.rolling(k).sum()
@@ -72,41 +62,114 @@ def backtest_leadlag_spread(
     var = r_btc.rolling(beta_lookback).var()
     beta = (cov / (var + 1e-12)).clip(-5, 5).fillna(0.0)
 
+    # NOW filter to test period for actual trading
+    if test_start is not None and not pd.isna(test_start):
+        test_mask = idx_full >= test_start
+    else:
+        test_mask = pd.Series(True, index=idx_full)
+    
+    if test_end is not None and not pd.isna(test_end):
+        test_mask = test_mask & (idx_full <= test_end)
+    
+    # Apply mask to get test period
+    idx = idx_full[test_mask]
+    ref = ref_full.loc[idx]
+    coi = coi_full.loc[idx]
+    r_btc_test = r_btc.loc[idx]
+    r_coin_test = r_coin.loc[idx]
+    z_btc = z_btc.loc[idx]
+    z_coin = z_coin.loc[idx]
+    beta = beta.loc[idx]
+
+    # Basic safety
+    if len(idx) < k + 100:
+        raise ValueError(f"Not enough TEST data: {len(idx)} bars (need at least {k+100})")
+
+    # ORIGINAL signals (we'll test both directions)
     long_pair  = (z_btc >= z_entry)  & (z_coin <  z_follow)
     short_pair = (z_btc <= -z_entry) & (z_coin > -z_follow)
 
-    pos = pd.Series(0, index=idx, dtype=int)  # +1 long coin/short BTC, -1 short coin/long BTC
-    hold = 0
+    # THE KEY FIX: Proper position management to prevent overtrading
+    pos = pd.Series(0, index=idx, dtype=int)
+    in_trade = False
+    entry_bar = -1
+    
     for t in range(len(idx)):
-        if pos.iloc[t-1] != 0 and hold > 0:
-            pos.iloc[t] = pos.iloc[t-1]
-            hold -= 1
-            if abs(z_coin.iloc[t] - z_btc.iloc[t]) < z_close:
-                pos.iloc[t] = 0; hold = 0
+        # If we're in a trade, manage it
+        if in_trade:
+            bars_held = t - entry_bar
+            
+            # Exit conditions:
+            # 1. Held for k bars (the lag period)
+            # 2. Spread has converged (both z-scores near zero)
+            spread_converged = (abs(z_btc.iloc[t]) < z_close and abs(z_coin.iloc[t]) < z_close)
+            time_expired = bars_held >= k
+            
+            if spread_converged or time_expired:
+                # Exit the trade
+                pos.iloc[t] = 0
+                in_trade = False
+                entry_bar = -1
+            else:
+                # Continue holding
+                pos.iloc[t] = pos.iloc[t-1]
+        
+        # If we're not in a trade, look for entry
         else:
+            # Require BOTH:
+            # 1. Strong signal (high z threshold)
+            # 2. Not already in a position recently (implicit from in_trade=False)
             if long_pair.iloc[t]:
-                pos.iloc[t] = 1;  hold = k
+                pos.iloc[t] = 1
+                in_trade = True
+                entry_bar = t
             elif short_pair.iloc[t]:
-                pos.iloc[t] = -1; hold = k
+                pos.iloc[t] = -1
+                in_trade = True
+                entry_bar = t
             else:
                 pos.iloc[t] = 0
 
-    h = beta.reindex(idx).fillna(0.0)
-    pair_ret = pos * (r_coin - h * r_btc)
+    # Pair returns calculation
+    h = beta.fillna(0.0)
+    pair_ret = pos * (r_coin_test - h * r_btc_test)
 
-    turns = (pos != pos.shift(1)).fillna(False)
-    fee = turns.astype(float) * (2 * fee_bps / 1e4)
+    # Fee calculation - charge on BOTH entry AND exit
+    position_change = pos.diff().fillna(pos.iloc[0])
+    
+    # Entry = nonzero position from zero
+    # Exit = zero position from nonzero
+    # Both incur fees on both legs
+    entries = ((pos != 0) & (pos.shift(1).fillna(0) == 0)).astype(float)
+    exits = ((pos == 0) & (pos.shift(1).fillna(0) != 0)).astype(float)
+    
+    # Each entry or exit trades both legs (coin + BTC hedge)
+    # At 1bp per leg = 2bp per side = 4bp round trip
+    fee = (entries + exits) * (2 * fee_bps / 1e4)
 
+    # Final equity curve
     eq = (pair_ret - fee).cumsum()
+    
+    # Calculate stats only on test period
+    total_minutes = len(idx)
+    total_days = total_minutes / (60 * 24)
+    
+    # Count actual round trips
+    actual_trades = int(entries.sum())
+    
     stats = {
         "coin": Path(coin_file).stem,
         "k": int(k),
-        "trades": int((turns & (pos != 0)).sum()),
-        "ret_total": float(eq.iloc[-1]),
-        "ret_annualized": float(pair_ret.mean()*60*24*365),
-        "vol_annualized": float(pair_ret.std()*np.sqrt(60*24*365)),
-        "sharpe": float((pair_ret.mean()/(pair_ret.std()+1e-12))*np.sqrt(60*24*365)),
-        "winrate": float((pair_ret[pos!=0] > 0).mean())
+        "test_bars": len(idx),
+        "test_days": round(total_days, 1),
+        "trades": actual_trades,
+        "ret_total": float(eq.iloc[-1]) if len(eq) > 0 else 0.0,
+        "ret_annualized": float(pair_ret.mean() * 60 * 24 * 365),
+        "vol_annualized": float(pair_ret.std() * np.sqrt(60 * 24 * 365)),
+        "sharpe": float((pair_ret.mean() / (pair_ret.std() + 1e-12)) * np.sqrt(60 * 24 * 365)),
+        "winrate": float((pair_ret[pos != 0] > 0).mean()) if (pos != 0).any() else 0.0,
+        "max_drawdown": float((eq - eq.cummax()).min()),
+        "avg_bars_per_trade": float((pos != 0).sum() / max(actual_trades, 1)),
     }
     return eq, pair_ret, pos, stats
 
@@ -116,7 +179,6 @@ def main():
     ap.add_argument("--coin", required=True, help="e.g., ADAUSD.csv")
     ap.add_argument("--ref",  default=DEFAULT_REF, help="e.g., BTCUSD.csv")
     
-    # --- change begins ---
     mx = ap.add_mutually_exclusive_group(required=True)
     mx.add_argument("--k", type=int, help="lag minutes from DTW (rounded)")
     mx.add_argument("--k-from", type=str,
@@ -126,11 +188,10 @@ def main():
                     help="lookback for z-scores (in 1-minute bars)")
     ap.add_argument("--beta-lookback", type=int, default=BETA_LOOKBACK,
                     help="lookback for beta (in 1-minute bars)")
-    # --- change ends ---
     
-    ap.add_argument("--z-entry", type=float, default=1.5)
+    ap.add_argument("--z-entry", type=float, default=2.0)
     ap.add_argument("--z-follow", type=float, default=0.5)
-    ap.add_argument("--z-close", type=float, default=0.3)
+    ap.add_argument("--z-close", type=float, default=0.5)
     ap.add_argument("--fee-bps", type=float, default=1.0)
     ap.add_argument("--out", default=str(STRATEGY_DIR / "sample_equity.csv"))
     ap.add_argument("--test-start", type=str, default=None,
@@ -139,7 +200,7 @@ def main():
                     help="ISO8601 UTC end for TEST trading window (optional).")
     args = ap.parse_args()
 
-    # --- Resolve k and TEST window ---
+    # Resolve k and TEST window
     test_start = pd.NaT
     test_end   = pd.NaT
     k = args.k
@@ -150,20 +211,18 @@ def main():
         if row.empty:
             raise SystemExit(f"No entry for {args.coin} in {args.k_from}")
         k = int(row["k"].iloc[0])
-        # default TEST window starts at train_end if user didn't pass --test-start
         if args.test_start is None:
             test_start = pd.Timestamp(row["train_end"].iloc[0])
         else:
             test_start = pd.Timestamp(args.test_start)
     else:
-        # no k-table; user must provide --k and (optionally) test window
         if args.test_start:
             test_start = pd.Timestamp(args.test_start)
 
     if args.test_end:
         test_end = pd.Timestamp(args.test_end)
 
-    # normalize to UTC
+    # Normalize to UTC
     if pd.notna(test_start) and test_start.tzinfo is None:
         test_start = test_start.tz_localize("UTC")
     if pd.notna(test_end) and test_end.tzinfo is None:
@@ -172,13 +231,13 @@ def main():
     eq, _, _, st = backtest_leadlag_spread(
         coin_file=args.coin,
         ref_file=args.ref,
-        k=k,                                  
+        k=k,
         z_entry=args.z_entry,
         z_follow=args.z_follow,
         z_close=args.z_close,
         fee_bps=args.fee_bps,
-        test_start=test_start,                 
-        test_end=test_end,                     
+        test_start=test_start,
+        test_end=test_end,
         z_lookback=args.z_lookback,
         beta_lookback=args.beta_lookback
     )
