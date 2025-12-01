@@ -103,7 +103,7 @@ def main():
     here = Path(__file__).resolve().parent
     project = here.parent
     default_data = project / "data" / "coin_data"
-    default_out  = here / "celeb_vs_trump_results.csv"
+    default_out  = here / "align_celeb_launches.csv"
     default_aligned = here / "aligned_prices.csv"
 
     ap = argparse.ArgumentParser(description="Compare celeb coins to TRUMP after launch (T0 alignment).")

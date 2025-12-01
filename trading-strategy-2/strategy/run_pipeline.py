@@ -5,15 +5,15 @@ import pandas as pd
 import numpy as np
 
 # ---- Project-relative defaults (portable) ----
-STRATEGY_DIR = Path(__file__).resolve().parent               # .../strategy
-PROJECT_DIR  = STRATEGY_DIR.parent                           # .../trading-strategy-2
+STRATEGY_DIR = Path(__file__).resolve().parent
+PROJECT_DIR  = STRATEGY_DIR.parent
 ANALYSIS_DIR = PROJECT_DIR / "analysis"
 DATA_DIR     = PROJECT_DIR / "data" / "data_1m"
 OUT_DIR      = STRATEGY_DIR / "dtw_out"
 PLOTS_DIR    = STRATEGY_DIR / "strategy_plots"
 
 DTW_SCRIPT   = ANALYSIS_DIR / "dynamic_time_warping_analysis.py"
-LEADLAG_MOD  = STRATEGY_DIR / "leadlag_spread.py"   # we'll import the function directly
+LEADLAG_MOD  = STRATEGY_DIR / "leadlag_spread.py"
 
 DEFAULT_REF  = "BTCUSD.csv"
 
@@ -56,7 +56,6 @@ def import_leadlag():
 
 def list_coins(data_dir: Path, ref_file: str, only: list[str] | None) -> list[str]:
     if only:
-        # normalize to actual filenames in data_dir
         wanted = {c if c.endswith(".csv") else f"{c}.csv" for c in only}
         files = [f for f in wanted if (data_dir / f).exists()]
     else:
@@ -127,10 +126,10 @@ def main():
     ktab = pd.read_csv(k_table_csv)
     ktab["symbol"] = ktab["symbol"].astype(str)
     k_map = dict(zip(ktab["symbol"], ktab["k"]))
-    tstart_map = dict(zip(ktab["symbol"], ktab["train_end"]))  # TEST starts after this
+    tstart_map = dict(zip(ktab["symbol"], ktab["train_end"]))
 
     # 3) Backtest per coin (TEST window)
-    leadlag = import_leadlag()  # module with backtest_leadlag_spread
+    leadlag = import_leadlag()
     ref_file = args.ref
     coins = list_coins(data_dir, ref_file, args.coins)
 
@@ -147,26 +146,30 @@ def main():
 
         print(f"[pipeline] {sym}: k={k}, TEST from {test_start.isoformat()}")
 
-        # run backtest via function to get stats + equity curve
-        eq, _, _, st = leadlag.backtest_leadlag_spread(
-            coin_file=coin_file,
-            ref_file=ref_file,
-            k=k,
-            z_entry=args.z_entry,
-            z_follow=args.z_follow,
-            z_close=args.z_close,
-            fee_bps=args.fee_bps,
-            test_start=test_start,
-            test_end=None,
-            z_lookback=args.z_lookback,
-            beta_lookback=args.beta_lookback
-        )
+        try:
+            # FIX: wrap in try-except to catch individual coin failures
+            eq, _, _, st = leadlag.backtest_leadlag_spread(
+                coin_file=coin_file,
+                ref_file=ref_file,
+                k=k,
+                z_entry=args.z_entry,
+                z_follow=args.z_follow,
+                z_close=args.z_close,
+                fee_bps=args.fee_bps,
+                test_start=test_start,
+                test_end=None,
+                z_lookback=args.z_lookback,
+                beta_lookback=args.beta_lookback
+            )
+        except Exception as e:
+            print(f"  [ERROR] backtest failed for {sym}: {e}")
+            continue
 
         # save equity curve
         eq_path = out_dir / f"equity_{sym}.csv"
         eq.to_csv(eq_path, header=["equity"])
         print(f"  -> saved equity {eq_path}")
-        all_eq.append(eq.rename(sym)) 
+        all_eq.append(eq.rename(sym))
 
         # collect stats
         st["ref"] = Path(ref_file).stem
@@ -174,19 +177,19 @@ def main():
         st["test_start"] = test_start.isoformat()
         stats_rows.append(st)
 
-    # optional per-coin plot (can be suppressed with --no-per-coin-plots)
-    if args.plots and not args.no_per_coin_plots:
-        try:
-            import matplotlib.pyplot as plt
-            ax = eq.rename("equity").plot(figsize=(9,3))
-            ax.set_title(f"{sym} lead–lag equity (k={k})")
-            ax.set_ylabel("cum. return")
-            ax.grid(True)
-            fig_path = plots_dir / f"equity_{sym}.png"
-            plt.tight_layout(); plt.savefig(fig_path, dpi=200); plt.close()
-            print(f"  -> saved plot   {fig_path}")
-        except Exception as e:
-            print(f"  [warn] plotting failed for {sym}: {e}")
+        # optional per-coin plot (can be suppressed with --no-per-coin-plots)
+        if args.plots and not args.no_per_coin_plots:
+            try:
+                import matplotlib.pyplot as plt
+                ax = eq.rename("equity").plot(figsize=(9,3))
+                ax.set_title(f"{sym} lead–lag equity (k={k})")
+                ax.set_ylabel("cum. return")
+                ax.grid(True)
+                fig_path = plots_dir / f"equity_{sym}.png"
+                plt.tight_layout(); plt.savefig(fig_path, dpi=200); plt.close()
+                print(f"  -> saved plot   {fig_path}")
+            except Exception as e:
+                print(f"  [warn] plotting failed for {sym}: {e}")
 
     # 4) Plot collective (single overlay of all coins)
     if args.plot_collective and all_eq:
@@ -196,28 +199,35 @@ def main():
             # Align all equities into one DataFrame
             eq_df = pd.concat(all_eq, axis=1).sort_index()
 
-            # Optional resampling (do it on returns, then re-cum)
+            # Optional resampling
             if args.collective_resample:
                 def _resample(series: pd.Series, rule: str) -> pd.Series:
                     r = series.diff().fillna(0.0)
                     return r.resample(rule).sum().cumsum()
-                eq_df = pd.concat([_resample(eq_df[c], args.collective_resample) for c in eq_df.columns], axis=1)
-                eq_df.columns = [c for c in all_eq[0].index.to_series().index.map(lambda _: None)] or eq_df.columns  # no-op safety
+                eq_df = pd.concat([_resample(eq_df[c], args.collective_resample) 
+                                   for c in eq_df.columns], axis=1)
 
-            # Normalize so all lines start at the same baseline (0)
+            # Normalize so all lines start at 0
             norm_df = eq_df - eq_df.iloc[0]
 
-            # Plot all coins on the same axes
+            # Plot all coins
             fig, ax = plt.subplots(figsize=(12, 5))
-            norm_df.plot(ax=ax, linewidth=1.2, alpha=0.95)
+            norm_df.plot(ax=ax, linewidth=1.2, alpha=0.7)
 
-            ax.set_title("Lead–Lag cumulative equity — all coins (normalized start)")
+            # FIX: Add equal-weight portfolio line
+            portfolio = norm_df.mean(axis=1)
+            ax.plot(portfolio.index, portfolio.values, 
+                   linewidth=2.5, color='black', label='Portfolio (equal-weight)', 
+                   linestyle='--', alpha=0.9)
+
+            ax.set_title("Lead–Lag cumulative equity – all coins (normalized start)")
             ax.set_ylabel("cumulative return (normalized)")
             ax.grid(True, linestyle=":", alpha=0.5)
 
-            # Manage legend (outside, multi-column if many coins)
+            # Manage legend
             ncols = max(1, min(4, int(np.ceil(len(norm_df.columns) / 8))))
-            ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0., ncol=ncols, fontsize=9)
+            ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), 
+                     borderaxespad=0., ncol=ncols, fontsize=9)
 
             fig.tight_layout()
             fig_path = plots_dir / "equity_collective.png"
@@ -234,7 +244,15 @@ def main():
         summary_path = out_dir / "summary_stats.csv"
         summary.to_csv(summary_path, index=False)
         print(f"\n[pipeline] summary -> {summary_path}")
-        print(summary.head().to_string(index=False))
+        print(summary.to_string(index=False))
+        
+        # FIX: Add aggregate statistics
+        print(f"\n[AGGREGATE STATS]")
+        print(f"Total coins tested: {len(summary)}")
+        print(f"Mean Sharpe: {summary['sharpe'].mean():.2f}")
+        print(f"Median Sharpe: {summary['sharpe'].median():.2f}")
+        print(f"Profitable coins: {(summary['ret_total'] > 0).sum()} / {len(summary)}")
+        print(f"Mean total return: {summary['ret_total'].mean():.2%}")
     else:
         print("\n[pipeline] no stats produced (check data and k-table).")
 
