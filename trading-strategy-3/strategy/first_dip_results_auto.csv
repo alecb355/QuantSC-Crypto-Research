@@ -1,6 +1,9 @@
 coin,trade_taken,ret,reason
 TRUMP,False,0.0,no_moon
+BONK,False,0.0,no_moon
 DADDY,True,0.022138191336254165,take_profit
 JENNER,True,0.22641030606039814,take_profit
 LIBRA,False,0.0,no_moon
 MELANIA,True,0.05137022488361409,take_profit
+MOTHER,False,0.0,no_moon
+POPCAT,False,0.0,no_moon
