@@ -1,21 +1,17 @@
 """
 Run full Strategy-3 First-Dip workflow in one go:
 
-1. Load aligned_prices.csv (normalized prices after launch)
-2. Grid-search first-dip parameters
+1. Load analysis/aligned_prices.csv (normalized prices after launch)
+2. Grid-search first-dip parameters using ALL coins
 3. Pick best parameter set
-4. Run final backtest with best parameters
-5. Save results CSVs under strategy/
-
-Place this file inside trading-strategy-3/ and run:
-
-    cd trading-strategy-3
-    python run_first_dip_full.py
+4. Run final backtest with best parameters on ALL coins
+5. Save results CSVs under strategy/ and print Sharpe ratio
 """
 
 from pathlib import Path
 import itertools
 import pandas as pd
+import numpy as np
 
 
 # -----------------------------
@@ -83,9 +79,9 @@ def first_dip_trade(
     # Find dip after the peak: price in [dip_min * max_norm, dip_max * max_norm]
     start_t = t_peak + 1
     end_t = min(s.index.max(), t_peak + max_minutes)
-    dip_mask = (s.loc[start_t:end_t] >= dip_min * max_norm) & (
-        s.loc[start_t:end_t] <= dip_max * max_norm
-    )
+    dip_window = s.loc[start_t:end_t]
+    dip_mask = (dip_window >= dip_min * max_norm) & (dip_window <= dip_max * max_norm)
+
     if not dip_mask.any():
         return False, 0.0, "no_dip"
 
@@ -99,6 +95,7 @@ def first_dip_trade(
     t_exit = t_last
     exit_norm = s.loc[t_exit]
 
+    # Walk forward bar-by-bar and check TP / SL
     for t in range(t_entry + 1, t_last + 1):
         val = s.loc[t]
         # Take profit: back to some fraction of the original peak
@@ -254,39 +251,54 @@ def pick_best_params(df_grid: pd.DataFrame, min_trades: int = 2):
     best = filt.iloc[0]
     return best
 
+
+# -----------------------------
+# 4. Sharpe helpers
+# -----------------------------
+
+def compute_sharpe_from_returns(rets: pd.Series) -> float:
+    """
+    Compute per-trade Sharpe ratio from a Series of returns.
+
+    Sharpe (not annualized) = mean(ret) / std(ret).
+
+    Returns NaN if fewer than 2 trades or std == 0.
+    """
+    r = pd.Series(rets).dropna().astype(float)
+    if len(r) < 2:
+        return float("nan")
+    mean_ret = r.mean()
+    std_ret = r.std(ddof=1)
+    if std_ret == 0:
+        return float("nan")
+    return float(mean_ret / std_ret)
+
+
 def compute_sharpe_from_results(results_path: Path) -> float:
     """
-    Compute per-trade Sharpe ratio from first_dip_results.csv.
-
+    Convenience wrapper: compute Sharpe from first_dip_results.csv.
     Uses only rows where trade_taken == True.
-    Sharpe = mean(ret) / std(ret) (un-annualized, per trade).
-    Returns NaN if fewer than 2 trades.
     """
     if not results_path.exists():
         raise FileNotFoundError(f"Results file not found at {results_path}")
 
     df = pd.read_csv(results_path)
     if "trade_taken" not in df.columns or "ret" not in df.columns:
-        raise ValueError("first_dip_results.csv must have 'trade_taken' and 'ret' columns.")
+        raise ValueError(
+            "results CSV must have 'trade_taken' and 'ret' columns."
+        )
 
-    rets = df.loc[df["trade_taken"] == True, "ret"].astype(float)
-    if len(rets) < 2:
-        return float("nan")
+    rets = df.loc[df["trade_taken"] == True, "ret"]
+    return compute_sharpe_from_returns(rets)
 
-    ret_mean = rets.mean()
-    ret_std = rets.std(ddof=1)
-    if ret_std == 0:
-        return float("nan")
-
-    sharpe = ret_mean / ret_std
-    return float(sharpe)
 
 # -----------------------------
-# 4. Main
+# 5. Main
 # -----------------------------
 
 def main():
-    base_dir = Path(__file__).resolve().parent.parent
+    # This file lives in trading-strategy-3/strategy/
+    base_dir = Path(__file__).resolve().parents[1]
     strategy_dir = base_dir / "strategy"
     strategy_dir.mkdir(exist_ok=True)
 
@@ -297,7 +309,7 @@ def main():
     print(f"Loaded aligned_prices with shape {prices.shape}")
 
     # 2) Grid search
-    print("Running grid search over first-dip parameters...")
+    print("Running grid search over first-dip parameters on ALL coins...")
     df_grid = grid_search_first_dip(prices)
     grid_path = strategy_dir / "first_dip_grid_results_auto.csv"
     df_grid.to_csv(grid_path, index=False)
@@ -328,9 +340,9 @@ def main():
     print(f"\nSaved per-coin first-dip results to {out_path}\n")
     print(df_final)
 
-    # 5) Compute Sharpe ratio
+    # 5) Compute Sharpe ratio across all trades
     sharpe = compute_sharpe_from_results(out_path)
-    print(f"\nFinal Sharpe ratio: {sharpe:.2f}")
+    print(f"\nIn-sample Sharpe ratio (per trade, not annualized): {sharpe:.2f}")
 
 
 if __name__ == "__main__":

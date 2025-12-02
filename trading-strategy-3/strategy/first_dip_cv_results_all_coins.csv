@@ -1,0 +1,9 @@
+held_out_coin,trade_taken,ret,reason,moon_mult,dip_min,dip_max,tp_level,stop_loss_pct,max_minutes,sharpe_per_coin
+TRUMP,False,0.0,no_moon,5.0,0.6,0.7,0.7,0.1,360,
+BONK,False,0.0,no_moon,5.0,0.6,0.7,0.7,0.1,360,
+DADDY,True,0.022138191336254165,take_profit,5.0,0.6,0.7,0.7,0.1,360,
+JENNER,True,0.03137973784322812,take_profit,5.0,0.4,0.8,0.8,0.1,360,
+LIBRA,False,0.0,no_moon,5.0,0.6,0.7,0.7,0.1,360,
+MELANIA,True,0.05137022488361409,take_profit,5.0,0.6,0.7,0.7,0.1,360,
+MOTHER,False,0.0,no_moon,5.0,0.6,0.7,0.7,0.1,360,
+POPCAT,False,0.0,no_moon,5.0,0.6,0.7,0.7,0.1,360,
