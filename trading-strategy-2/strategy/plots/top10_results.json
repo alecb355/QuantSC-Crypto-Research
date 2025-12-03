@@ -1,0 +1,72 @@
+{
+  "SOLUSD": {
+    "symbol": "SOLUSD",
+    "trade_asset": "BTC",
+    "threshold": 0.002,
+    "sharpe": -2.3462658870616484,
+    "total_return": -0.29670717112028444
+  },
+  "DOGEUSD": {
+    "symbol": "DOGEUSD",
+    "trade_asset": "DOGEUSD",
+    "threshold": 0.002,
+    "sharpe": -3.6890687201991446,
+    "total_return": -0.5842547550374868
+  },
+  "BNBUSD": {
+    "symbol": "BNBUSD",
+    "trade_asset": "BNBUSD",
+    "threshold": 0.002,
+    "sharpe": -5.337975327845161,
+    "total_return": -0.6336667192847525
+  },
+  "ADAUSD": {
+    "symbol": "ADAUSD",
+    "trade_asset": "ADAUSD",
+    "threshold": 0.002,
+    "sharpe": -3.8669245157680394,
+    "total_return": -0.5334052812671418
+  },
+  "ETHUSD": {
+    "symbol": "ETHUSD",
+    "trade_asset": "BTC",
+    "threshold": 0.002,
+    "sharpe": -1.6876811660417879,
+    "total_return": -0.22555401389175866
+  },
+  "XRPUSD": {
+    "symbol": "XRPUSD",
+    "trade_asset": "BTC",
+    "threshold": 0.002,
+    "sharpe": -0.23303112080834434,
+    "total_return": -0.06393435036826789
+  },
+  "SUIUSD": {
+    "symbol": "SUIUSD",
+    "trade_asset": "BTC",
+    "threshold": 0.001,
+    "sharpe": -0.32045849070047006,
+    "total_return": -0.0675885011671079
+  },
+  "BTCUSDT": {
+    "symbol": "BTCUSDT",
+    "trade_asset": "BTCUSDT",
+    "threshold": 0.002,
+    "sharpe": -11.092061323605648,
+    "total_return": -0.8057513324804522
+  },
+  "ADAUSDT": {
+    "symbol": "ADAUSDT",
+    "trade_asset": "ADAUSDT",
+    "threshold": 0.002,
+    "sharpe": -1.1371496360103661,
+    "total_return": -0.21412017237078962
+  },
+  "SOLUSDT": {
+    "symbol": "SOLUSDT",
+    "trade_asset": "SOLUSDT",
+    "threshold": 0.002,
+    "sharpe": -2.7206807404236732,
+    "total_return": -0.3660075804894628
+  }
+}
